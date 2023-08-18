@@ -7,6 +7,7 @@
 //CercaPercorso
 
 /* --- STRUCTS --- */
+
 //Stazione di Servizio (Binary Search Tree)
 struct node{
     int key; //distanza della stazione dall'inizio dell'autostrada
@@ -32,7 +33,7 @@ void heapify(int arr[], int i, int heapSize);
 struct node* crea_nodo(int key);
 struct node* inserisci_nodo(struct node* node, int key);
 void inorder(struct node* root);
-struct node* search(struct node *root, int key);
+struct node* search(struct node* root, int key);
 struct node* demolisci_stazione(struct node* root, int k);
 struct node* aggiungi_auto(struct node* root, int dist, int autonomia);
 struct node* rottama_auto(struct node* root, int dist, int da_rottamare);
@@ -125,6 +126,9 @@ int* string_parsing(const char* input_string) {
 }
 
 /* --- AGGIUNGI-STAZIONE --- */
+
+//TODO: gestire caso 'non aggiunta'
+//TODO: eliminare print di debug
 
 //Inserimento nuova stazione nel BST
 struct node* aggiungi_stazione(struct node* root, int num[]){
@@ -269,6 +273,9 @@ struct node* search(struct node *root, int key){
 
 /* --- DEMOLISCI-STAZIONE --- */
 
+//TODO: gestire caso 'non demolita'
+//TODO: eliminare print di debug
+
 //Rimozione di un elemento dal BST
 struct node* demolisci_stazione(struct node* root, int k){
 
@@ -292,7 +299,6 @@ struct node* demolisci_stazione(struct node* root, int k){
         printf("\nFiglio sinistro vuoto");
         struct node* temp = root->right;
         free(root);
-
         return temp;
     }
     else if (root->right == NULL) {
@@ -326,55 +332,68 @@ struct node* demolisci_stazione(struct node* root, int k){
 
 /* --- AGGIUNGI-AUTO --- */
 
+//TODO: gestire caso 'non aggiunta'
+//TODO: eliminare print di debug
+
 //Aggiunge l'autonomia data alla stazione richiesta
 struct node* aggiungi_auto(struct node* root, int dist, int autonomia){
     struct node* stazione;
-    int n_macchine, lunghezza;
     stazione = search(root, dist);
 
     //DEBUG
-    n_macchine = stazione->dim_parco;
-    lunghezza = stazione->capacita;
-    printf("\nNumero di macchine presenti: %d", n_macchine);
-    printf("\nAutonomie presenti:\t");
-    for(int i=0; i<n_macchine; i++){
+    printf("\nNumero di macchine presenti inizialmente: %d", stazione->dim_parco);
+    printf("\nLunghezza iniziale array delle autonomie: %d", stazione->capacita);
+    printf("\nAutonomie presenti inizialmente:\t");
+    for(int i=0; i<stazione->dim_parco; i++){
         printf("%d\t", stazione->autonomie[i]);
     }
 
-    //Controllo che la dimensione del parco non superi il numero massimo di autonomie
-    if(n_macchine == 512){
-        printf("\nnon aggiunta");
+    if(stazione->dim_parco == 512){
+        //printf("non aggiunta");
     }else{
-        //Se ci sono dei posti disponibili nell'array, inserisco all'ultima posizione
-        if (n_macchine < lunghezza){
-            stazione->autonomie[n_macchine] = autonomia;
-        }else if (n_macchine = lunghezza){
-            //Altrimenti aumento la dimensione dell'array per creare spazio
-            lunghezza = 2*n_macchine;
-            stazione->autonomie = (int*)realloc(stazione->autonomie, lunghezza*sizeof(int));
-            //Assegno a zero tutti gli spazi appena allocati
-            for(int i=n_macchine+1; i<lunghezza; i++){
+        if (stazione->dim_parco == stazione->capacita && stazione->dim_parco == 0){
+            stazione->dim_parco = stazione->dim_parco + 1;
+            stazione->capacita = 2 * stazione->dim_parco;
+            stazione->autonomie = (int*)malloc(stazione->capacita * sizeof(int));
+            stazione->autonomie[0] = autonomia;
+            stazione->autonomie[1] = 0;
+            //printf("aggiunta");
+        }else if (stazione->dim_parco == stazione->capacita && stazione->dim_parco != 0){
+            stazione->dim_parco = stazione->dim_parco + 1;
+            stazione->capacita = 2 * stazione->dim_parco;
+            stazione->autonomie = (int*)realloc(stazione->autonomie, stazione->capacita * sizeof(int));
+            stazione->autonomie[stazione->dim_parco-1] = autonomia;
+            //Poni a zero la parte dell'array non contenente auto
+            for(int i=stazione->dim_parco; i<stazione->capacita; i++){
                 stazione->autonomie[i]=0;
             }
-            //Inserisco alla fine dell'array iniziale
-            stazione->autonomie[n_macchine] = autonomia;
+            //printf("aggiunta");
+        }else if (stazione->dim_parco < stazione->capacita){
+            stazione->autonomie[stazione->dim_parco] = autonomia;
+            stazione->dim_parco = stazione->dim_parco + 1;
+            //printf("aggiunta");
         }
     }
 
+    //DEBUG
+    printf("\nNumero di macchine presenti dopo aggiunta: %d", stazione->dim_parco);
+    printf("\nLunghezza attuale array delle autonomie: %d", stazione->capacita);
+    printf("\nAutonomie presenti prima di heapify:\t");
+    for(int i=0; i<stazione->dim_parco; i++) {
+        printf("%d\t", stazione->autonomie[i]);
+    }
+
     //Riorganizzo l'array in un max-heap
-    int start = (lunghezza/2) - 1;
+    int start = ((stazione->dim_parco)/2) - 1;
     for (int i=start; i>=0; i--){
-        heapify(stazione->autonomie, i, lunghezza);
+        heapify(stazione->autonomie, i, stazione->dim_parco);
     }
 
     //DEBUG
-    for (int i=0; i<lunghezza; i++){
-        printf("\n%d", stazione->autonomie[i]);
+    printf("\nAutonomie presenti dopo heapify:\t");
+    for (int i=0; i<stazione->capacita; i++){
+        printf("\t%d", stazione->autonomie[i]);
     }
-
-    //Aggiornamento dati
-    stazione->dim_parco = n_macchine+1;
-    stazione->capacita = lunghezza;
 
     return root;
 }
@@ -480,9 +499,7 @@ struct node* minimo(struct node* root){ //OK
 //inizio della stazione
 void pianifica_percorso(struct node* root, int A, int B){
 
-    struct node* stazioneA, stazioneB;
-
-    stazioneA = search(root, A);
-    stazioneB = search(root, B);
+    struct node* stazioneA = search(root, A);
+    struct node* stazioneB = search(root, B);
 
 }
