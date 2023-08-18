@@ -400,56 +400,48 @@ struct node* aggiungi_auto(struct node* root, int dist, int autonomia){
 
 /* --- ROTTAMA-AUTO --- */
 
-//TODO: suggerimento: al posto di porre a zero l'auto da rottamare, sostituiscila con quella che sta all'ultimo posto,
-//      cancella quella, e poi chiama heapify
+//TODO: gestire caso 'non rottamata'
+//TODO: eliminare print di debug
 
 //Pone a zero l'autonomia dell'auto da rottamare e riorganizza il vettore max-heap della stazione passata in ingresso
 struct node* rottama_auto(struct node* root, int dist, int da_rottamare){
     struct node* stazione;
-    int lunghezza, n_macchine, i=0;
     stazione = search(root, dist);
 
     //DEBUG
-    n_macchine = stazione->dim_parco;
-    lunghezza = stazione->capacita;
-    printf("\nNumero di macchine presenti: %d", n_macchine);
-    printf("\nAutonomie presenti:\t");
-    for(int i=0; i<n_macchine; i++){
+    printf("\nNumero di macchine presenti inizialmente: %d", stazione->dim_parco);
+    printf("\nAutonomie presenti inizialmente:\t");
+    for(int i=0; i<stazione->dim_parco; i++){
         printf("%d\t", stazione->autonomie[i]);
     }
 
-    //Scorro il max-heap finchè non trovo l'auto da rottamare
-    printf("\nVediamo se scorre correttamente");
-    for (i=0; i<n_macchine; i++){
+    //Scorro il max-heap finchè non trovo l'auto da rottamare, le assegno il valore dell'ultima autonomia presente nell'array,
+    //pongo quella a zero
+    for (int i=0; i<stazione->dim_parco; i++){
         if (stazione->autonomie[i]==da_rottamare){
-            stazione->autonomie[i] = 0;
+            stazione->autonomie[i] = stazione->autonomie[stazione->dim_parco-1];
+            stazione->autonomie[stazione->dim_parco-1] = 0;
             break;
         }
     }
 
+    //Aggiorno i valori
+    stazione->dim_parco = stazione->dim_parco - 1;
+
     printf("\nAutonomie presenti dopo rottamazione prima di heapify:\t");
-    for(int i=0; i<n_macchine; i++){
+    for(int i=0; i<stazione->dim_parco; i++){
         printf("%d\t", stazione->autonomie[i]);
     }
 
     //Riorganizzo l'array in un max-heap
-    int start = (lunghezza/2)-1;
+    int start = (stazione->dim_parco/2)-1;
     for (int i=start; i>=0; i--){
-        heapify(stazione->autonomie, i, lunghezza);
+        heapify(stazione->autonomie, i, stazione->dim_parco);
     }
-
-    for(int i=0; i<n_macchine-1; i++){ //DA SISTEMARE ASSOLUTAMENTE!!!
-        if(stazione->autonomie[i]==0 && stazione->autonomie[i+1] != 0){
-            stazione->autonomie[i]=stazione->autonomie[i+1];
-            stazione->autonomie[i+1]=0;
-        }
-    }
-
-    stazione->dim_parco = n_macchine - 1;
 
     //DEBUG
-    for (int i=0; i<lunghezza; i++){
-        printf("\n%d", stazione->autonomie[i]);
+    for (int i=0; i<stazione->capacita; i++){
+        printf("\t%d", stazione->autonomie[i]);
     }
 
     return root;
