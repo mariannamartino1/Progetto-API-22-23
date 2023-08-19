@@ -39,6 +39,8 @@ struct node* aggiungi_auto(struct node* root, int dist, int autonomia);
 struct node* rottama_auto(struct node* root, int dist, int da_rottamare);
 struct node* minimo(struct node* node);
 struct node* successore(struct node* root, struct node* n);
+struct node* massimo(struct node* root);
+struct node* predecessore(struct node* root, struct node* n);
 void pianifica_percorso(struct node* root, int A, int B);
 
 /* --- MAIN --- */
@@ -72,7 +74,7 @@ int main(){
             //DEBUG
             inorder(root);
 
-        }else if (strncmp(input_string, "demolisci-stazione", 18) == 0){//OK
+        }else if (strncmp(input_string, "demolisci-stazione", 18) == 0){//OK (circa)
             int* num = string_parsing(input_string);
             //Chiamata alla funzione "demolisci-stazione"
             demolisci_stazione(root, num[0]);
@@ -86,7 +88,7 @@ int main(){
             aggiungi_auto(root, num[0], num[1]);
             fflush(stdin);
 
-        }else if (strncmp(input_string, "rottama-auto", 12) == 0){ //Funziona ma è da ottimizzare
+        }else if (strncmp(input_string, "rottama-auto", 12) == 0){ //OK
             int* num = string_parsing(input_string);
             //Chiamata alla funzione "rottama-auto"
             rottama_auto(root, num[0], num[1]);
@@ -392,7 +394,7 @@ struct node* aggiungi_auto(struct node* root, int dist, int autonomia){
     //DEBUG
     printf("\nAutonomie presenti dopo heapify:\t");
     for (int i=0; i<stazione->capacita; i++){
-        printf("\t%d", stazione->autonomie[i]);
+        printf("%d\t", stazione->autonomie[i]);
     }
 
     return root;
@@ -440,6 +442,7 @@ struct node* rottama_auto(struct node* root, int dist, int da_rottamare){
     }
 
     //DEBUG
+    printf("\nAutonomie presenti dopo rottamazione dopo heapify: ");
     for (int i=0; i<stazione->capacita; i++){
         printf("\t%d", stazione->autonomie[i]);
     }
@@ -451,7 +454,7 @@ struct node* rottama_auto(struct node* root, int dist, int da_rottamare){
 /* --- PIANIFICA-PERCORSO --- */
 
 //Funzione che restituisce il successore in ordine crescente del nodo passato come parametro
-struct node* successore(struct node* root, struct node* n){ //OK
+struct node* successore(struct node* root, struct node* n){
 
     struct node* succ = NULL;
 
@@ -474,16 +477,53 @@ struct node* successore(struct node* root, struct node* n){ //OK
 }
 
 //Funzione che restituisce il valore minimo trovato nel BST
-struct node* minimo(struct node* root){ //OK
+struct node* minimo(struct node* root){
 
-    struct node* current = root;
+    struct node* curr = root;
 
     //Scorre finche non si trova il nodo più a sinistra del BST
-    while (current->left != NULL){
-        current = current->left;
+    while (curr->left != NULL){
+        curr = curr->left;
     }
 
-    return current;
+    return curr;
+}
+
+//Funzione che restituisce il predecessore in ordine crescente del nodo passato come parametro
+struct node* predecessore(struct node* root, struct node* n){
+
+    struct node* prec = NULL;
+
+    if (n->left != NULL){
+        return massimo(n->left);
+    }
+
+    while (root != NULL){
+        if (n->key > root->key){
+            prec = root;
+            root = root->right;
+        } else if(n->key < root->key){
+            root = root->left;
+        }else{
+            break;
+        }
+    }
+
+    return prec;
+
+}
+
+//Funzione che restituisce il valore massimo trovato nel BST
+struct node* massimo(struct node* root){
+
+    struct node* curr = root;
+
+    //Scorre finche non si trova il nodo più a destra del BST
+    while (curr->right != NULL){
+        curr = curr->right;
+    }
+
+    return curr;
 }
 
 
