@@ -42,6 +42,8 @@ struct node* successore(struct node* root, struct node* n);
 struct node* massimo(struct node* root);
 struct node* predecessore(struct node* root, struct node* n);
 void pianifica_percorso(struct node* root, int A, int B);
+void display (struct valida *node);
+void inserisci_valida(struct valida **head, int val);
 
 /* --- MAIN --- */
 int main(){
@@ -95,10 +97,11 @@ int main(){
             fflush(stdin);
 
         }else if (strncmp(input_string, "pianifica-percorso", 18) == 0){//WIP
-            int* num = string_parsing(input_string);
+            //int* num = string_parsing(input_string);
             //Chiamata alla funzione "pianifica-percorso"
-            pianifica_percorso(root, num[0], num[1]);
-            fflush(stdin);
+            //pianifica_percorso(root, num[0], num[1]);
+            //fflush(stdin);
+
         }
     }
 
@@ -526,12 +529,67 @@ struct node* massimo(struct node* root){
     return curr;
 }
 
+//Funzione di inserimento nella lista contenente le chiavi delle stazioni considerate 'valide'
+void inserisci_testa(struct valida **head, int val){ //inserisci_testa(&head, ...) per cambiare il riferimento alla testa
+
+    //Creazione nuovo nodo
+    struct valida* tappa = (struct valida*)malloc(sizeof(struct valida));
+    new->tappa = val;
+    new->tappa = *head;
+
+    *head = tappa;
+}
+
+//Utilitario per printare la lista
+void display (struct valida *node){
+
+    //as linked list will end when Node is Null
+    while (node != NULL)
+    {
+        printf ("%d ", node->dist);
+        node = node->next;
+    }
+    printf ("\n");
+}
 
 //Algoritmo di pianificazione del percorso considerando il numero minimo di tappe possibili e più vicine all'
 //inizio della stazione
 void pianifica_percorso(struct node* root, int A, int B){
 
+    //Stazione di partenza
     struct node* stazioneA = search(root, A);
+    //Stazione di arrivo
     struct node* stazioneB = search(root, B);
+
+    //Divisione in base al senso di percorrenza dell'autostrada
+    if(A<B){//Senso di percorrenza positivo
+        //Controllo se le tappe sono necessarie
+        if(stazioneA->autonomie[0] >= (B-A)){
+            printf("%d %d", A, B);
+        }else{
+            //Inizio a creare la lista di tappe mettendo la destinazione finale, seguiranno inserimenti in testa
+            struct valida* head = (struct valida*)malloc(sizeof(struct valida*));
+            head->dist = B;
+            head->next = NULL;
+            //Creato spazio che conterrà i dati del nodo correntemente in visita
+            struct node* prec = (struct node*)malloc(sizeof(struct node*));
+            prec = predecessore(root, stazioneB); //Contiene il predecessore di B
+            while(prec->key != A){
+                if (prec->autonomie[0] >= (B - prec->key)) {
+                    //Inserisci in testa alla lista tappe
+                    inserisci_testa(&prec, prec->key);
+                    //Cancella tutto quello che si trova in mezzo
+                }else{
+                    //Scorri la lista tappe (curr), ferma quando prec->autonomie[0] < (curr->key - prec->key), alla tappa appena prima di curr
+                    //collega prec
+                    //Cancella tutto quello che si trova in mezzo
+                }
+            }
+
+        }
+
+    }else if(A>B){//Senso di percorrenza negativo
+        //...
+    }
 
 }
