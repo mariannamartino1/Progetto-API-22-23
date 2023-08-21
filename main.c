@@ -41,9 +41,10 @@ struct node* minimo(struct node* node);
 struct node* successore(struct node* root, struct node* n);
 struct node* massimo(struct node* root);
 struct node* predecessore(struct node* root, struct node* n);
+struct valida* inserisci_in_testa(struct valida* head, int dist);
+void stampa_lista(struct valida* head);
 void pianifica_percorso(struct node* root, int A, int B);
-void display (struct valida *node);
-void inserisci_valida(struct valida **head, int val);
+
 
 /* --- MAIN --- */
 int main(){
@@ -97,10 +98,10 @@ int main(){
             fflush(stdin);
 
         }else if (strncmp(input_string, "pianifica-percorso", 18) == 0){//WIP
-            //int* num = string_parsing(input_string);
+            int* num = string_parsing(input_string);
             //Chiamata alla funzione "pianifica-percorso"
-            //pianifica_percorso(root, num[0], num[1]);
-            //fflush(stdin);
+            pianifica_percorso(root, num[0], num[1]);
+            fflush(stdin);
 
         }
     }
@@ -530,26 +531,49 @@ struct node* massimo(struct node* root){
 }
 
 //Funzione di inserimento nella lista contenente le chiavi delle stazioni considerate 'valide'
-void inserisci_testa(struct valida **head, int val){ //inserisci_testa(&head, ...) per cambiare il riferimento alla testa
-
-    //Creazione nuovo nodo
-    struct valida* tappa = (struct valida*)malloc(sizeof(struct valida));
-    new->tappa = val;
-    new->tappa = *head;
-
-    *head = tappa;
+struct valida* inserisci_in_testa(struct valida* head, int dist){
+    if(head != NULL){
+        struct valida* succ = head;
+        head = (struct valida*) malloc(sizeof(struct valida*));
+        head -> dist = dist;
+        head -> next = succ;
+    }
+    else{
+        //DEBUG
+        printf("\nCreando la lista: ");
+        head = (struct valida*) malloc(sizeof(struct valida*));
+        head -> dist = dist;
+        head -> next = NULL;
+        printf("\t%d", head->dist);
+    }
+    return head;
 }
 
-//Utilitario per printare la lista
-void display (struct valida *node){
-
-    //as linked list will end when Node is Null
-    while (node != NULL)
-    {
-        printf ("%d ", node->dist);
-        node = node->next;
+//Funzione che rimuove la testa della lista
+struct valida* rimuovi_in_testa(struct valida* head){
+    if(head != NULL){
+        struct valida* temp = head;
+        head = head -> next;
+        free(temp);
     }
-    printf ("\n");
+
+    return head;
+}
+
+
+//Utilitario per printare la lista
+void stampa_lista(struct valida* head){
+
+    printf("\n");
+    if(head != NULL){
+        while(head != NULL) {
+            printf("\t%d ", head->dist);
+            head = head->next;
+        }
+    }
+    else {
+        printf("LISTA VUOTA \n");
+    }
 }
 
 //Algoritmo di pianificazione del percorso considerando il numero minimo di tappe possibili e più vicine all'
@@ -563,31 +587,96 @@ void pianifica_percorso(struct node* root, int A, int B){
 
     //Divisione in base al senso di percorrenza dell'autostrada
     if(A<B){//Senso di percorrenza positivo
+        //DEBUG
+        printf("\n Stazione A: %d, Autonomia max: %d, Stazione B: %d", stazioneA->key, stazioneA->autonomie[0], stazioneB->key);
+
         //Controllo se le tappe sono necessarie
         if(stazioneA->autonomie[0] >= (B-A)){
-            printf("%d %d", A, B);
+            printf("\nPrint ufficiale: %d %d", A, B);
         }else{
             //Inizio a creare la lista di tappe mettendo la destinazione finale, seguiranno inserimenti in testa
-            struct valida* head = (struct valida*)malloc(sizeof(struct valida*));
-            head->dist = B;
-            head->next = NULL;
-            //Creato spazio che conterrà i dati del nodo correntemente in visita
+            struct valida* head = NULL;
+            head = inserisci_in_testa(head, B);
+
+            //DEBUG
+            stampa_lista(head);
+
+            //Crea spazio che conterrà i dati del nodo del BST correntemente in visita
             struct node* prec = (struct node*)malloc(sizeof(struct node*));
             prec = predecessore(root, stazioneB); //Contiene il predecessore di B
+
+            //DEBUG
+            printf("\nPredecessore visitato: %d", prec->key);
+
+            //Scorrerà la lista dellee tappe valide
+            struct valida* curr = (struct valida*)malloc(sizeof(struct valida*));
+            curr = head;
+
+            //Finchè andando a ritroso non incontro il nodo del BST contenente la stazione A
             while(prec->key != A){
+
+                //DEBUG
+                printf("\nEntrato nel loop di scorrimento del BST per il nodo %d", prec->key);
+
+                //SEGMENTATION FAULT DOPO LA PRIMA ITERAZIONE DEL WHILE ESTERNO, SI FERMA QUA
+                //TODO: CAPIRE COSA CAUSA SEGMENTATION FAULT
+
+                //Controllo se l'autonomia max della stazione corrente basta per raggiungere la destinazione B
                 if (prec->autonomie[0] >= (B - prec->key)) {
+
+                    //DEBUG
+                    printf("\nIn questo nodo l'autonomia max e' sufficiente per raggiungere B.");
+
+                    //Cancella tutto quello che si trova in mezzo tra l'inizio della lista e B
+                    while(curr->dist != B){
+                        //DEBUG
+                        printf("\nEntrato nel loop cancellazione");
+                        rimuovi_in_testa(head);
+                        curr = curr->next;
+                    }
+
+                    //DEBUG
+                    printf("\nSuperato il loop di cancellazione");
+                    printf("\n%d", prec->key);
+
                     //Inserisci in testa alla lista tappe
-                    inserisci_testa(&prec, prec->key);
-                    //Cancella tutto quello che si trova in mezzo
+                    head = inserisci_in_testa(head, prec->key);
+
+                    //DEBUG
+                    printf("\nLista attuale: ");
+                    stampa_lista(head);
+
                 }else{
-                    //Scorri la lista tappe (curr), ferma quando prec->autonomie[0] < (curr->key - prec->key), alla tappa appena prima di curr
-                    //collega prec
-                    //Cancella tutto quello che si trova in mezzo
+
+                    int chiave;
+
+                    //Scorri la lista tappe (curr), ferma quando la max autonomia presente in prec non basta più per arrivare ad una stazione presente
+                    //nella lista, alla tappa appena prima di curr collega prec
+                    while(prec->autonomie[0] > (curr->dist - prec->key)){
+                        chiave = curr->dist; //Salvo la chiave dell'ultimo nodo visitato prima di scorrere (da collegare a prec)
+                        curr = curr->next;
+                    }
+
+                    //Cancella tutto quello che si trova in mezzo tra prec e curr->dist == chiave
+                    while(curr->dist != chiave){
+                        rimuovi_in_testa(head);
+                        curr = curr->next;
+                    }
+
+                    //'chiave' dovrebbe contenere la chiave del nodo precedente a quello dove si esce dal ciclo
+                    inserisci_in_testa(head, chiave);
                 }
+
+                //Passo indietro nel BST
+                prec = predecessore(root, prec);
+
+                //DEBUG
+                printf("\nProssimo Predecessore: %d", prec->key);
             }
-
+            //DEBUG
+            printf("\nLista finale: ");
+            stampa_lista(head);
         }
-
     }else if(A>B){//Senso di percorrenza negativo
         //...
     }
