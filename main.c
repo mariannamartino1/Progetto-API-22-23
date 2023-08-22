@@ -457,6 +457,10 @@ struct node* rottama_auto(struct node* root, int dist, int da_rottamare){
 
 /* --- PIANIFICA-PERCORSO --- */
 
+//TODO: senso opposto
+//TODO: caso stazione A è il minimo(/massimo) del BST
+//TODO: cancellare print di debug
+
 //Funzione che restituisce il successore in ordine crescente del nodo passato come parametro
 struct node* successore(struct node* root, struct node* n){
 
