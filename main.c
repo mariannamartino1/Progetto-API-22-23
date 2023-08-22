@@ -533,6 +533,7 @@ struct node* massimo(struct node* root){
 //Funzione di inserimento nella lista contenente le chiavi delle stazioni considerate 'valide'
 struct valida* inserisci_in_testa(struct valida* head, int dist){
     if(head != NULL){
+        printf("\nAggiungendo nodo alla lista");
         struct valida* succ = head;
         head = (struct valida*) malloc(sizeof(struct valida*));
         head -> dist = dist;
@@ -612,27 +613,30 @@ void pianifica_percorso(struct node* root, int A, int B){
             struct valida* curr = (struct valida*)malloc(sizeof(struct valida*));
             curr = head;
 
-            //Finchè andando a ritroso non incontro il nodo del BST contenente la stazione A
-            while(prec->key != A){
+            //Predecessore di A:
+            struct node* precA = (struct node*)malloc(sizeof(struct node*));
+            precA = predecessore(root, stazioneA);
+
+            //Finchè andando a ritroso non incontro il nodo del BST contenente la stazione appena prima di A
+            while(prec->key != precA->key){
 
                 //DEBUG
                 printf("\nEntrato nel loop di scorrimento del BST per il nodo %d", prec->key);
-
-                //SEGMENTATION FAULT DOPO LA PRIMA ITERAZIONE DEL WHILE ESTERNO, SI FERMA QUA
-                //TODO: CAPIRE COSA CAUSA SEGMENTATION FAULT
 
                 //Controllo se l'autonomia max della stazione corrente basta per raggiungere la destinazione B
                 if (prec->autonomie[0] >= (B - prec->key)) {
 
                     //DEBUG
-                    printf("\nIn questo nodo l'autonomia max e' sufficiente per raggiungere B.");
+                    printf("\n\nIn questo nodo l'autonomia max e' sufficiente per raggiungere B.");
 
+                    curr = head;
                     //Cancella tutto quello che si trova in mezzo tra l'inizio della lista e B
                     while(curr->dist != B){
                         //DEBUG
                         printf("\nEntrato nel loop cancellazione");
-                        rimuovi_in_testa(head);
-                        curr = curr->next;
+                        printf("\nRimuovendo %d", head->dist);
+                        head = rimuovi_in_testa(head);
+                        curr = head;
                     }
 
                     //DEBUG
@@ -648,23 +652,44 @@ void pianifica_percorso(struct node* root, int A, int B){
 
                 }else{
 
+                    //DEBUG
+                    printf("\n\nIn questo nodo l'autonomia max non e' sufficiente per raggiungere B.");
+
                     int chiave;
+
+                    curr = head;
 
                     //Scorri la lista tappe (curr), ferma quando la max autonomia presente in prec non basta più per arrivare ad una stazione presente
                     //nella lista, alla tappa appena prima di curr collega prec
-                    while(prec->autonomie[0] > (curr->dist - prec->key)){
+                    while(prec->autonomie[0] + prec->key > curr->dist){
                         chiave = curr->dist; //Salvo la chiave dell'ultimo nodo visitato prima di scorrere (da collegare a prec)
+
+                        //DEBUG
+                        printf("\nEntrato nel loop di scorrimento della lista 'valide'");
                         curr = curr->next;
+
                     }
 
+                    printf("\n%d chiave", chiave);
+                    curr = head;
                     //Cancella tutto quello che si trova in mezzo tra prec e curr->dist == chiave
                     while(curr->dist != chiave){
-                        rimuovi_in_testa(head);
-                        curr = curr->next;
+
+                        //DEBUG
+                        printf("\nEntrato nel loop cancellazione in testa della lista 'valide'");
+                        printf("\n%d curr->dist", curr->dist);
+                        printf("\n%d chiave", chiave);
+
+                        head = rimuovi_in_testa(head);
+                        curr = head;
                     }
 
                     //'chiave' dovrebbe contenere la chiave del nodo precedente a quello dove si esce dal ciclo
-                    inserisci_in_testa(head, chiave);
+                    head = inserisci_in_testa(head, prec->key);
+
+                    //DEBUG
+                    printf("\nLista attuale: ");
+                    stampa_lista(head);
                 }
 
                 //Passo indietro nel BST
@@ -673,6 +698,7 @@ void pianifica_percorso(struct node* root, int A, int B){
                 //DEBUG
                 printf("\nProssimo Predecessore: %d", prec->key);
             }
+
             //DEBUG
             printf("\nLista finale: ");
             stampa_lista(head);
