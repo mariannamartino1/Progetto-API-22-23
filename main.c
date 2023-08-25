@@ -20,7 +20,7 @@ struct node{
 //Tappa considerata necessaria per il percorso (Linked List)
 struct valida{
     int dist; //Chiave della stazione salvata
-    struct valida* next; //Puntatore alla tappa successiva
+    struct valida* next; //Puntatore alla tappa successiva/precedente
 };
 
 
@@ -42,6 +42,7 @@ struct node* successore(struct node* root, struct node* n);
 struct node* massimo(struct node* root);
 struct node* predecessore(struct node* root, struct node* n);
 struct valida* inserisci_in_testa(struct valida* head, int dist);
+struct valida* rimuovi_in_testa(struct valida* head);
 void stampa_lista(struct valida* head);
 void pianifica_percorso(struct node* root, int A, int B);
 
@@ -665,7 +666,7 @@ void pianifica_percorso(struct node* root, int A, int B){
 
                     //Scorri la lista tappe (curr), ferma quando la max autonomia presente in prec non basta più per arrivare ad una stazione presente
                     //nella lista, alla tappa appena prima di curr collega prec
-                    while(prec->autonomie[0] + prec->key > curr->dist){
+                    while(prec->autonomie[0] + prec->key >= curr->dist){
                         chiave = curr->dist; //Salvo la chiave dell'ultimo nodo visitato prima di scorrere (da collegare a prec)
 
                         //DEBUG
@@ -708,7 +709,89 @@ void pianifica_percorso(struct node* root, int A, int B){
             stampa_lista(head);
         }
     }else if(A>B){//Senso di percorrenza negativo
-        //...
+        //DEBUG
+        printf("Stazione A: %d, Autonomia massima in A: %d, Stazione B: %d", stazioneA->key, stazioneB->key, stazioneA->autonomie[0])
+
+        //Controllo se le tappe sono necessarie
+        if(stazioneA->autonomie[0] >= (A-B)){ //Tappe non necessarie
+            printf("\nPrint ufficiale: %d %d", A, B);
+        }else {
+            int start = stazioneA->key;
+
+            //Spazio per il nodo predecessore che scorrerà l'albero
+            struct node* prec = (struct node*)malloc(sizeof(struct node*));
+            prec = predecessore(root, A);
+
+            //DEBUG
+            printf("\nPredecessore visitato: %d", prec->key);
+
+            //Inizio a creare la lista che conterrà le tappe valide
+            struct valida* head = NULL;
+            head = inserisci_in_testa(head, A);
+
+            //Variabile che conterrà la chiave e la max autonomia della stazione più lontana in visita, si parte da A
+            int start = A;
+            int end = A - stazioneA->autonomie[0];
+            int autonomia_max = stazioneA->autonomia[0];
+            int autonomia_start;
+
+            //Predecessore di B:
+            struct node* precB = (struct node*)malloc(sizeof(struct node*));
+            precB = predecessore(root, stazioneB);
+
+            //Ultima stazione visitata per ogni raggiungibilità
+            struct node* last = (struct node*)malloc(sizeof(struct node*));
+            last = NULL;
+
+            //Finchè andando a ritroso non incontro il nodo del BST contenente la stazione appena prima di A
+            while(prec->key != precB->key){
+
+                //Salvo l'autonomia del nodo iniziale corrente (si parte da A)
+                autonomia_start = prec->autonomie[0];
+
+                //Scorro tutte le autonomie raggiungibili a partire dal nodo contrassegnato come start (end è la distanza max percorribile)
+                while(end <= prec->key < start){
+
+                    //Chiave del'ultimo nodo visitato prima di uscire dal ciclo
+                    int chiave = prec->key;
+
+                    //Riassegno il valore della massima autonomia se ne trovo una maggiore e salvo la chiave della stazione nella lista 'valide'
+                    if (prec->autonomie[0] > autonomia_max) {
+                        autonomia_max = prec->autonomie[0];
+                        head = inserisci_in_testa(head, prec->key);
+                        //Scorri
+                        prec = predecessore(root, prec);
+                    }else {
+                        //Scorri
+                        prec = predecessore(root, prec);
+                    }
+
+                }
+
+
+                //Se il valore dell'autonomia non è cambiato ho terminato l'autonomia, quindi uso quella dell'ultima stazione visitata
+                if (autonomia_max == autonomia_start){
+                    last = successore(root, prec->key);
+                    //Salvo l'ultima autonomia come massima
+                    autonomia_max = last->autonomie[0];
+                }
+
+                //Controllo se tra le stazioni del BST comprese tra quella con autonomia massima salvata e il valore corrente di prec ne
+                //esiste una più vicina all'attuale valore di 'end', allora cancello quella salvata e inserisco quella appena trovata
+                while (last->key != head->dist){
+                    if (last->autonomie[0] > autonomia_max){
+                        head = rimuovi_in_testa(head);
+                        head = inserisci_in_testa(head, last->key);
+                    }
+                    last = successore(root, last);
+                }
+
+                //Riassegno
+                start = end;
+                end = start - prec->autonomie[0];
+
+            }
+        }
     }
 
 }
