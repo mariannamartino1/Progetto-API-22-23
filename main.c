@@ -67,6 +67,7 @@ int main(){
     while(1) { //TODO: sostituire '1' con 'End Of File'
         printf("\nInserisci comando: \n");
         //Acquisition
+        fflush(stdin);
         fgets(input_string, MAX_LENGTH, stdin);
 
         /* --- Input Comparison --- */
@@ -122,7 +123,7 @@ int main(){
 int* string_parsing(const char* input_string) {
     int total_n = 0;
     int n, i, j=0;
-    int* num = (int*)malloc(20 * sizeof(int));
+    int* num = (int*)malloc(1000 * sizeof(int));
     while (sscanf(input_string + total_n, "%*[^0123456789]%d%n", &i, &n) == 1){
         total_n += n;
         num[j] = i;
@@ -573,7 +574,7 @@ void stampa_lista(struct valida* head){
     printf("\n");
     if(head != NULL){
         while(head != NULL) {
-            printf("\t%d ", head->dist);
+            printf("\t%d", head->dist);
             head = head->next;
         }
     }
@@ -591,13 +592,15 @@ void pianifica_percorso(struct node* root, int A, int B){
     //Stazione di arrivo
     struct node* stazioneB = search(root, B);
 
+    int flag = 1;
+
     //Divisione in base al senso di percorrenza dell'autostrada
     if(A<B){//Senso di percorrenza positivo
         //DEBUG
         printf("\n Stazione A: %d, Autonomia max: %d, Stazione B: %d", stazioneA->key, stazioneA->autonomie[0], stazioneB->key);
 
         //Controllo se le tappe sono necessarie
-        if(stazioneA->autonomie[0] >= (B-A)){
+        if(stazioneA->autonomie[0] >= (B-A)) {
             printf("\nPrint ufficiale: %d %d", A, B);
         }else{
             //Inizio a creare la lista di tappe mettendo la destinazione finale, seguiranno inserimenti in testa
@@ -618,13 +621,21 @@ void pianifica_percorso(struct node* root, int A, int B){
             struct valida* curr = (struct valida*)malloc(sizeof(struct valida*));
             curr = head;
 
+            //Minimo del BST
+            struct node* min = NULL;
+            min = minimo(root);
+
             //Predecessore di A:
             struct node* precA = (struct node*)malloc(sizeof(struct node*));
             precA = predecessore(root, stazioneA);
+            if (precA == NULL){
+                printf("stocazzo");
+            }
 
             //Finchè andando a ritroso non incontro il nodo del BST contenente la stazione appena prima di A
-            while(prec->key != precA->key){
+            while(prec != NULL || prec != precA){
 
+                printf("\nrientrato");
                 //DEBUG
                 printf("\nEntrato nel loop di scorrimento del BST per il nodo %d", prec->key);
 
@@ -655,6 +666,10 @@ void pianifica_percorso(struct node* root, int A, int B){
                     printf("\nLista attuale: ");
                     stampa_lista(head);
 
+                }else if(prec->key + prec->autonomie[0] < head->dist){ //Se da questa stazione non si può raggiungere nulla
+                    flag = 0;
+                    //Passo indietro nel BST
+                    prec = predecessore(root, prec);
                 }else{
 
                     //DEBUG
@@ -697,11 +712,20 @@ void pianifica_percorso(struct node* root, int A, int B){
                     stampa_lista(head);
                 }
 
-                //Passo indietro nel BST
-                prec = predecessore(root, prec);
 
-                //DEBUG
-                printf("\nProssimo Predecessore: %d", prec->key);
+                if(flag == 1){
+                    //Passo indietro nel BST
+                    if (prec->key != A){
+                        prec = predecessore(root, prec);
+                        printf("\n prec %d", prec->key);
+                    }else{
+                        prec = NULL;
+                        precA = NULL;
+                        printf("\n stocazzo");
+                    }
+                }
+                flag = 1;
+
             }
 
             //DEBUG
@@ -726,6 +750,7 @@ void pianifica_percorso(struct node* root, int A, int B){
 
             //Inizio a creare la lista che conterrà le tappe valide
             struct valida* head = NULL;
+            head = inserisci_in_testa(head, A);
 
             //Variabile che conterrà la chiave e la max autonomia della stazione più lontana in visita, si parte da A
             int start = A;
@@ -764,9 +789,11 @@ void pianifica_percorso(struct node* root, int A, int B){
 
                     //Riassegno il valore della massima autonomia se ne trovo una maggiore o uguale e salvo la chiave della stazione nella lista 'valide'
                     if (prec->autonomie[0] >= autonomia_max) {
-                        autonomia_max = prec->autonomie[0];
-                        //TODO: Rimuovere testa se non è A
+                        if (head->dist != A && prec->autonomie[0] > autonomia_max){
+                            head = rimuovi_in_testa(head);
+                        }
                         head = inserisci_in_testa(head, prec->key);
+                        autonomia_max = prec->autonomie[0];
                         printf("\nInserito in testa %d", head->dist);
                         //Scorri
                         prec = predecessore(root, prec);
