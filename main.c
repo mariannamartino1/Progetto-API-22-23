@@ -710,29 +710,28 @@ void pianifica_percorso(struct node* root, int A, int B){
         }
     }else if(A>B){//Senso di percorrenza negativo
         //DEBUG
-        printf("Stazione A: %d, Autonomia massima in A: %d, Stazione B: %d", stazioneA->key, stazioneB->key, stazioneA->autonomie[0])
+        printf("Stazione A: %d, Autonomia massima in A: %d, Stazione B: %d", stazioneA->key, stazioneB->key, stazioneA->autonomie[0]);
 
         //Controllo se le tappe sono necessarie
         if(stazioneA->autonomie[0] >= (A-B)){ //Tappe non necessarie
             printf("\nPrint ufficiale: %d %d", A, B);
         }else {
-            int start = stazioneA->key;
 
             //Spazio per il nodo predecessore che scorrerà l'albero
             struct node* prec = (struct node*)malloc(sizeof(struct node*));
-            prec = predecessore(root, A);
+            prec = stazioneA;
 
             //DEBUG
             printf("\nPredecessore visitato: %d", prec->key);
 
             //Inizio a creare la lista che conterrà le tappe valide
             struct valida* head = NULL;
-            head = inserisci_in_testa(head, A);
 
             //Variabile che conterrà la chiave e la max autonomia della stazione più lontana in visita, si parte da A
             int start = A;
             int end = A - stazioneA->autonomie[0];
-            int autonomia_max = stazioneA->autonomia[0];
+            /*DEBUG*/printf("\nend vale: %d", end);
+            int autonomia_max = stazioneA->autonomie[0];
             int autonomia_start;
 
             //Predecessore di B:
@@ -746,19 +745,29 @@ void pianifica_percorso(struct node* root, int A, int B){
             //Finchè andando a ritroso non incontro il nodo del BST contenente la stazione appena prima di A
             while(prec->key != precB->key){
 
+                //DEBUG
+                printf("\nEntrato nel ciclo che scorre da A a B");
+
                 //Salvo l'autonomia del nodo iniziale corrente (si parte da A)
                 autonomia_start = prec->autonomie[0];
 
+                //DEBUG
+                printf("\nAutonomia max del nodo corrente: %d", autonomia_start);
+
                 //Scorro tutte le autonomie raggiungibili a partire dal nodo contrassegnato come start (end è la distanza max percorribile)
-                while(end <= prec->key < start){
+                while(prec->key <= start && prec->key >= end){
 
-                    //Chiave del'ultimo nodo visitato prima di uscire dal ciclo
-                    int chiave = prec->key;
+                    //DEBUG
+                    printf("\nEntrato nel loop che scorre le autonomie raggiungibili da nodo %d", prec->key);
+                    printf("\nAutonomia max salvata: %d", autonomia_max);
+                    printf("\nAutonomia di questo nodo: %d", prec->autonomie[0]);
 
-                    //Riassegno il valore della massima autonomia se ne trovo una maggiore e salvo la chiave della stazione nella lista 'valide'
-                    if (prec->autonomie[0] > autonomia_max) {
+                    //Riassegno il valore della massima autonomia se ne trovo una maggiore o uguale e salvo la chiave della stazione nella lista 'valide'
+                    if (prec->autonomie[0] >= autonomia_max) {
                         autonomia_max = prec->autonomie[0];
+                        //TODO: Rimuovere testa se non è A
                         head = inserisci_in_testa(head, prec->key);
+                        printf("\nInserito in testa %d", head->dist);
                         //Scorri
                         prec = predecessore(root, prec);
                     }else {
@@ -766,31 +775,52 @@ void pianifica_percorso(struct node* root, int A, int B){
                         prec = predecessore(root, prec);
                     }
 
+                    //DEBUG
+                    printf("\nAutonomia max adesso: %d", autonomia_max);
+
+
+
                 }
 
+                last = successore(root, prec);
 
-                //Se il valore dell'autonomia non è cambiato ho terminato l'autonomia, quindi uso quella dell'ultima stazione visitata
-                if (autonomia_max == autonomia_start){
-                    last = successore(root, prec->key);
-                    //Salvo l'ultima autonomia come massima
+                printf("\nStart %d", start);
+                printf("\nTesta della lista: %d", head->dist);
+
+                //Se la testa della lista delle tappe è rimasta invariata, inserisco l'ultima stazione visitata in testa
+                if (head->dist == start){
+                    printf("\nValore della testa: %d", head->dist);
+                    head = inserisci_in_testa(head, last->key);
+                    printf("\nValore della testa dopo: %d", head->dist);
                     autonomia_max = last->autonomie[0];
                 }
 
+
                 //Controllo se tra le stazioni del BST comprese tra quella con autonomia massima salvata e il valore corrente di prec ne
                 //esiste una più vicina all'attuale valore di 'end', allora cancello quella salvata e inserisco quella appena trovata
-                while (last->key != head->dist){
+                /*while (last->key != head->dist){
                     if (last->autonomie[0] > autonomia_max){
                         head = rimuovi_in_testa(head);
                         head = inserisci_in_testa(head, last->key);
                     }
                     last = successore(root, last);
-                }
+                }*/
 
                 //Riassegno
-                start = end;
-                end = start - prec->autonomie[0];
+                start = head->dist;
+                end = start - autonomia_max;
+
+                //DEBUG
+                printf("\nValore di start: %d", start);
+                printf("\nValore di end: %d", end);
+                printf("\nValore attuale lista tappe: ");
+                stampa_lista(head);
 
             }
+
+            //DEBUG
+            printf("\nValore finale lista tappe: ");
+            stampa_lista(head);
         }
     }
 
