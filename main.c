@@ -37,14 +37,16 @@ struct node* search(struct node* root, int key);
 struct node* demolisci_stazione(struct node* root, int k);
 struct node* aggiungi_auto(struct node* root, int dist, int autonomia);
 struct node* rottama_auto(struct node* root, int dist, int da_rottamare);
-struct node* minimo(struct node* node);
+struct node* minimo(struct node* root);
 struct node* successore(struct node* root, struct node* n);
 struct node* massimo(struct node* root);
 struct node* predecessore(struct node* root, struct node* n);
 struct valida* inserisci_in_testa(struct valida* head, int dist);
 struct valida* rimuovi_in_testa(struct valida* head);
 void stampa_lista(struct valida* head);
-void pianifica_percorso(struct node* root, int A, int B);
+void stampa_lista_contrario(struct valida *head);
+void pianifica_percorso_a(struct node* root, int A, int B);
+void pianifica_percorso_r(struct node* root, int A, int B);
 
 
 /* --- MAIN --- */
@@ -52,23 +54,25 @@ int main(){
 
     char input_string[MAX_LENGTH];
     struct node* root = NULL;
-    int key;
 
     /* --- INTRO --- */
+    /*
     printf("Benvenuto su CercaPercorso. Menu' dei comandi: \n");
     printf("\t- aggiungi-stazione distanza numero-auto autonomia-auto-1 ... autonomia-auto-n \n");
     printf("\t- demolisci-stazione distanza \n");
     printf("\t- aggiungi-auto distanza-stazione autonomia-auto-da-aggiungere\n");
     printf("\t- rottama-auto distanza-stazione autonomia-auto-da-rottamare\n");
     printf("\t- pianifica-percorso distanza-stazione-partenza distanza-stazione-arrivo\n");
-
+    */
     /* --- COMMAND EXECUTION --- */
 
     while(1) { //TODO: sostituire '1' con 'End Of File'
-        printf("\nInserisci comando: \n");
+        //printf("\nInserisci comando: \n");
         //Acquisition
         fflush(stdin);
-        fgets(input_string, MAX_LENGTH, stdin);
+        if(fgets(input_string, sizeof(input_string), stdin)==NULL || feof(stdin)){
+            break;
+        }
 
         /* --- Input Comparison --- */
         if (strncmp(input_string, "aggiungi-stazione", 17) == 0){//OK
@@ -77,7 +81,7 @@ int main(){
             root = aggiungi_stazione(root, num);
             fflush(stdin);
             //DEBUG
-            inorder(root);
+            //inorder(root);
 
         }else if (strncmp(input_string, "demolisci-stazione", 18) == 0){//OK (circa)
             int* num = string_parsing(input_string);
@@ -85,7 +89,7 @@ int main(){
             demolisci_stazione(root, num[0]);
             fflush(stdin);
             //DEBUG
-            inorder(root);
+            //inorder(root);
 
         }else if (strncmp(input_string, "aggiungi-auto", 13) == 0) {//OK
             int* num = string_parsing(input_string);
@@ -102,13 +106,18 @@ int main(){
         }else if (strncmp(input_string, "pianifica-percorso", 18) == 0){//WIP
             int* num = string_parsing(input_string);
             //Chiamata alla funzione "pianifica-percorso"
-            pianifica_percorso(root, num[0], num[1]);
+            if(num[0] > num[1]) {
+                pianifica_percorso_r(root, num[0], num[1]);
+            }
+            else{
+                pianifica_percorso_a(root, num[0], num[1]);
+            }
             fflush(stdin);
 
         }
     }
 
-    inorder(root);
+    //inorder(root);
 
     return 0;
 }
@@ -116,8 +125,6 @@ int main(){
 /* --- FUNCTIONS' IMPLEMENTATION ---*/
 
 /* --- INPUT PARSING --- */
-
-//TODO: aumentare (con discrezione) la dimensione dell'array per accogliere più dati in ingresso
 
 //Funzione che estrae i dati passati tramite input e li inserisce in un array
 int* string_parsing(const char* input_string) {
@@ -135,9 +142,6 @@ int* string_parsing(const char* input_string) {
 
 /* --- AGGIUNGI-STAZIONE --- */
 
-//TODO: gestire caso 'non aggiunta'
-//TODO: eliminare print di debug
-
 //Inserimento nuova stazione nel BST
 struct node* aggiungi_stazione(struct node* root, int num[]){
     int n_macchine;
@@ -151,17 +155,20 @@ struct node* aggiungi_stazione(struct node* root, int num[]){
     autonomie = aggiungi_parco(n_macchine, num); //Viene restituito un array (puntatore) di autonomie organizzato in max-heap
 
     //DEBUG
-    printf("\nautonomie ordinate");
+    //printf("\nautonomie ordinate");
 
     //Aggiunta effettiva stazione
-    if (root == NULL){
-        root = inserisci_nodo(root, dist_stazione); //Inserimento del primo elemento come radice
+    struct node* stazione = NULL;
+    stazione = search(root, dist_stazione);
+    if (stazione != NULL && dist_stazione != root->key) {
+        printf("non aggiunta\n");
+        return root;
     }else{
-        inserisci_nodo(root, dist_stazione);
+        root = inserisci_nodo(root, dist_stazione);
     }
 
     //DEBUG
-    printf("\nNodo inserito: %d", dist_stazione);
+    //printf("\nNodo inserito: %d", dist_stazione);
 
     //Collegamento max-heap delle macchine alla struttura dati che rappresenta la stazione
     struct node* nodo_inserito = search(root, dist_stazione);
@@ -170,12 +177,12 @@ struct node* aggiungi_stazione(struct node* root, int num[]){
     nodo_inserito -> capacita = n_macchine;
 
     //DEBUG
-    printf("\nNumero macchine presenti: %d", nodo_inserito->dim_parco);
-    printf("\nAutonomie della stazione inserita:\t");
-    for(int i=0; i<n_macchine; i++){
-        printf("%d\t", nodo_inserito->autonomie[i]);
-    }
-
+    //printf("\nNumero macchine presenti: %d", nodo_inserito->dim_parco);
+    //printf("\nAutonomie della stazione inserita:\t");
+    //for(int i=0; i<n_macchine; i++){
+    //    printf("%d\t", nodo_inserito->autonomie[i]);
+    //}
+    printf("aggiunta\n");
     return root;
 }
 
@@ -197,7 +204,7 @@ int* aggiungi_parco(int dim, int num[]){
     }
 
     //DEBUG
-    printf("\nCreato parco ordinato");
+    //printf("\nCreato parco ordinato");
 
     return autonomie;
 }
@@ -243,11 +250,11 @@ struct node* inserisci_nodo(struct node* node, int key){
 
     //Albero vuoto
     if (node == NULL){
-        printf("\nCaso base");
+        //printf("\nCaso base");
         return crea_nodo(key);
     }else{
         //Albero non vuoto
-        printf("\nAlbero non vuoto");
+        //printf("\nAlbero non vuoto");
         if(key < node->key){
             node->left = inserisci_nodo(node->left, key);
         }else if(key > node->key){
@@ -300,25 +307,25 @@ struct node* demolisci_stazione(struct node* root, int k){
     }
 
     //DEBUG
-    printf("\n%d verra' eliminato", root->key);
+    //printf("\n%d verra' eliminato", root->key);
 
     if (root->left == NULL) {
         //DEBUG
-        printf("\nFiglio sinistro vuoto");
+        //printf("\nFiglio sinistro vuoto");
         struct node* temp = root->right;
         free(root);
         return temp;
     }
     else if (root->right == NULL) {
         //DEBUG
-        printf("\nFiglio destro vuoto");
+        //printf("\nFiglio destro vuoto");
         struct node* temp = root->left;
         free(root);
         return temp;
     }
     else {
         //DEBUG
-        printf("\nEsistono entrambi i figli");
+        //printf("\nEsistono entrambi i figli");
         struct node* succParent = root;
         struct node* succ = root->right;
         while (succ->left != NULL) {
@@ -340,24 +347,25 @@ struct node* demolisci_stazione(struct node* root, int k){
 
 /* --- AGGIUNGI-AUTO --- */
 
-//TODO: gestire caso 'non aggiunta'
-//TODO: eliminare print di debug
-
 //Aggiunge l'autonomia data alla stazione richiesta
 struct node* aggiungi_auto(struct node* root, int dist, int autonomia){
     struct node* stazione;
     stazione = search(root, dist);
-
-    //DEBUG
-    printf("\nNumero di macchine presenti inizialmente: %d", stazione->dim_parco);
-    printf("\nLunghezza iniziale array delle autonomie: %d", stazione->capacita);
-    printf("\nAutonomie presenti inizialmente:\t");
-    for(int i=0; i<stazione->dim_parco; i++){
-        printf("%d\t", stazione->autonomie[i]);
+    if (stazione == NULL && dist != root->key){
+        printf("non aggiunta\n");
+        return root;
     }
+    //DEBUG
+    //printf("\nNumero di macchine presenti inizialmente: %d", stazione->dim_parco);
+    //printf("\nLunghezza iniziale array delle autonomie: %d", stazione->capacita);
+    //printf("\nAutonomie presenti inizialmente:\t");
+    //for(int i=0; i<stazione->dim_parco; i++){
+    //    printf("%d\t", stazione->autonomie[i]);
+    //}
+
 
     if(stazione->dim_parco == 512){
-        //printf("non aggiunta");
+        printf("non aggiunta\n");
     }else{
         if (stazione->dim_parco == stazione->capacita && stazione->dim_parco == 0){
             stazione->dim_parco = stazione->dim_parco + 1;
@@ -375,21 +383,21 @@ struct node* aggiungi_auto(struct node* root, int dist, int autonomia){
             for(int i=stazione->dim_parco; i<stazione->capacita; i++){
                 stazione->autonomie[i]=0;
             }
-            //printf("aggiunta");
+            printf("aggiunta\n");
         }else if (stazione->dim_parco < stazione->capacita){
             stazione->autonomie[stazione->dim_parco] = autonomia;
             stazione->dim_parco = stazione->dim_parco + 1;
-            //printf("aggiunta");
+            printf("aggiunta\n");
         }
     }
 
     //DEBUG
-    printf("\nNumero di macchine presenti dopo aggiunta: %d", stazione->dim_parco);
-    printf("\nLunghezza attuale array delle autonomie: %d", stazione->capacita);
-    printf("\nAutonomie presenti prima di heapify:\t");
-    for(int i=0; i<stazione->dim_parco; i++) {
-        printf("%d\t", stazione->autonomie[i]);
-    }
+    //printf("\nNumero di macchine presenti dopo aggiunta: %d", stazione->dim_parco);
+    //printf("\nLunghezza attuale array delle autonomie: %d", stazione->capacita);
+    //printf("\nAutonomie presenti prima di heapify:\t");
+    //for(int i=0; i<stazione->dim_parco; i++) {
+    //    printf("%d\t", stazione->autonomie[i]);
+    //}
 
     //Riorganizzo l'array in un max-heap
     int start = ((stazione->dim_parco)/2) - 1;
@@ -398,30 +406,30 @@ struct node* aggiungi_auto(struct node* root, int dist, int autonomia){
     }
 
     //DEBUG
-    printf("\nAutonomie presenti dopo heapify:\t");
-    for (int i=0; i<stazione->capacita; i++){
-        printf("%d\t", stazione->autonomie[i]);
-    }
+    //printf("\nAutonomie presenti dopo heapify:\t");
+    //for (int i=0; i<stazione->capacita; i++){
+    //    printf("%d\t", stazione->autonomie[i]);
+    //}
 
     return root;
 }
 
 /* --- ROTTAMA-AUTO --- */
 
-//TODO: gestire caso 'non rottamata'
-//TODO: eliminare print di debug
-
 //Pone a zero l'autonomia dell'auto da rottamare e riorganizza il vettore max-heap della stazione passata in ingresso
 struct node* rottama_auto(struct node* root, int dist, int da_rottamare){
     struct node* stazione;
     stazione = search(root, dist);
-
-    //DEBUG
-    printf("\nNumero di macchine presenti inizialmente: %d", stazione->dim_parco);
-    printf("\nAutonomie presenti inizialmente:\t");
-    for(int i=0; i<stazione->dim_parco; i++){
-        printf("%d\t", stazione->autonomie[i]);
+    if (stazione == NULL && dist != root->key){
+        printf("non rottamata\n");
+        return root;
     }
+    //DEBUG
+    //printf("\nNumero di macchine presenti inizialmente: %d", stazione->dim_parco);
+    //printf("\nAutonomie presenti inizialmente:\t");
+    //for(int i=0; i<stazione->dim_parco; i++){
+    //    printf("%d\t", stazione->autonomie[i]);
+    //}
 
     //Scorro il max-heap finchè non trovo l'auto da rottamare, le assegno il valore dell'ultima autonomia presente nell'array,
     //pongo quella a zero
@@ -436,10 +444,10 @@ struct node* rottama_auto(struct node* root, int dist, int da_rottamare){
     //Aggiorno i valori
     stazione->dim_parco = stazione->dim_parco - 1;
 
-    printf("\nAutonomie presenti dopo rottamazione prima di heapify:\t");
-    for(int i=0; i<stazione->dim_parco; i++){
-        printf("%d\t", stazione->autonomie[i]);
-    }
+    //printf("\nAutonomie presenti dopo rottamazione prima di heapify:\t");
+    //for(int i=0; i<stazione->dim_parco; i++){
+    //    printf("%d\t", stazione->autonomie[i]);
+    //}
 
     //Riorganizzo l'array in un max-heap
     int start = (stazione->dim_parco/2)-1;
@@ -448,19 +456,19 @@ struct node* rottama_auto(struct node* root, int dist, int da_rottamare){
     }
 
     //DEBUG
-    printf("\nAutonomie presenti dopo rottamazione dopo heapify: ");
-    for (int i=0; i<stazione->capacita; i++){
-        printf("\t%d", stazione->autonomie[i]);
-    }
+    //printf("\nAutonomie presenti dopo rottamazione dopo heapify: ");
+    //for (int i=0; i<stazione->capacita; i++){
+    //    printf("\t%d", stazione->autonomie[i]);
+    //}
 
+    printf("rottamata\n");
     return root;
 }
 
 
 /* --- PIANIFICA-PERCORSO --- */
 
-//TODO: senso opposto
-//TODO: caso stazione A è il minimo(/massimo) del BST
+//TODO: gestire casi percorso inesistente ritorno
 //TODO: cancellare print di debug
 
 //Funzione che restituisce il successore in ordine crescente del nodo passato come parametro
@@ -539,19 +547,20 @@ struct node* massimo(struct node* root){
 //Funzione di inserimento nella lista contenente le chiavi delle stazioni considerate 'valide'
 struct valida* inserisci_in_testa(struct valida* head, int dist){
     if(head != NULL){
-        printf("\nAggiungendo nodo alla lista");
-        struct valida* succ = head;
-        head = (struct valida*) malloc(sizeof(struct valida*));
-        head -> dist = dist;
-        head -> next = succ;
+        //printf("\nAggiungendo nodo alla lista");
+        struct valida* newNode = (struct valida*)malloc(sizeof(struct valida));
+        newNode -> dist = dist;
+        newNode -> next = head;
+        head = newNode;
     }
     else{
         //DEBUG
-        printf("\nCreando la lista: ");
-        head = (struct valida*) malloc(sizeof(struct valida*));
-        head -> dist = dist;
-        head -> next = NULL;
-        printf("\t%d", head->dist);
+        //printf("\nCreando la lista: ");
+        struct valida* newNode = (struct valida*)malloc(sizeof(struct valida));
+        newNode -> dist = dist;
+        newNode -> next = NULL;
+        head = newNode;
+        //printf("\t%d", head->dist);
     }
     return head;
 }
@@ -570,285 +579,230 @@ struct valida* rimuovi_in_testa(struct valida* head){
 
 //Utilitario per printare la lista
 void stampa_lista(struct valida* head){
-
+    while(head != NULL) {
+        printf("%d ", head->dist);
+        head = head->next;
+    }
     printf("\n");
-    if(head != NULL){
-        while(head != NULL) {
-            printf("\t%d", head->dist);
-            head = head->next;
-        }
+}
+
+//
+void stampa_lista_contrario(struct valida *head){
+    if(head == NULL){
+        return;
     }
-    else {
-        printf("LISTA VUOTA \n");
+    else{
+        stampa_lista_contrario(head->next);
+        printf("%d ", head->dist);
     }
+
 }
 
 //Algoritmo di pianificazione del percorso considerando il numero minimo di tappe possibili e più vicine all'
 //inizio della stazione
-void pianifica_percorso(struct node* root, int A, int B){
+
+void pianifica_percorso_a(struct node* root, int A, int B){
+    struct node* stazioneA = search(root, A);
+    struct node* cur = predecessore(root, search(root, B));
+    struct valida* head = NULL;
+    head = inserisci_in_testa(head, B);
+    while(cur != stazioneA){
+        if(cur->key + cur->autonomie[0] >= B){
+            if(head->dist != B){
+                while(head->dist != B){
+                    head = rimuovi_in_testa(head);
+                }
+                head = inserisci_in_testa(head, cur->key);
+            } else{
+                head = inserisci_in_testa(head, cur->key);
+            }
+            cur = predecessore(root, cur);
+        }else if(cur->key+cur->autonomie[0]<head->dist){
+            cur = predecessore(root, cur);
+        }
+        else {
+            int k = head->dist;
+            while (cur->key + cur->autonomie[0] >= head->dist) {
+                k = head->dist;
+                head = rimuovi_in_testa(head);
+            }
+            head = inserisci_in_testa(head, k);
+            head = inserisci_in_testa(head, cur->key);
+            cur = predecessore(root, cur);
+        }
+
+    }
+
+    if (stazioneA->key + stazioneA->autonomie[0] >= head->dist){
+        head = inserisci_in_testa(head, A);
+        stampa_lista(head);
+    }else{
+        printf("nessun percorso\n");
+    }
+}
+
+struct node* stazione_end(struct node* root, int chiave){
+    //Restituire la stazione più lontana raggiungibile
+    struct node *stazione = search(root, chiave);
+    struct node *cur = stazione;
+    int end = stazione->key - stazione->autonomie[0];
+
+    while (cur != NULL && cur->key >= end){
+        cur = predecessore(root, cur);
+    }
+    cur = successore(root, cur);
+    return cur;
+}
+
+void pianifica_percorso_r(struct node* root, int A, int B){
 
     //Stazione di partenza
     struct node* stazioneA = search(root, A);
     //Stazione di arrivo
     struct node* stazioneB = search(root, B);
 
+    struct node* prec = stazioneA; //Nodo che scorrerà fino alla fine fermandosi alle tappe valide (per conoscerne la chiave)
+    prec = stazioneA;
+
+    struct valida* head = NULL;
+    head = inserisci_in_testa(head, A);
+
+    int max_autonomia;
+    int start = A;
+    int end = A - stazioneA->autonomie[0];
     int flag = 1;
 
-    //Divisione in base al senso di percorrenza dell'autostrada
-    if(A<B){//Senso di percorrenza positivo
+    struct node* curr = predecessore(root, prec);
+    max_autonomia = curr->autonomie[0]; //Salvo la massima autonomia del nodo appena prima di prec
+
+    while(flag == 1 && prec != stazioneB) {
+/*
         //DEBUG
-        printf("\n Stazione A: %d, Autonomia max: %d, Stazione B: %d", stazioneA->key, stazioneA->autonomie[0], stazioneB->key);
+        printf("\n\nCiclo esterno.");
+        printf("\nCurr iniziale vale %d", curr->key);
+        printf("\nPrec vale %d", prec->key);
+*/
 
-        //Controllo se le tappe sono necessarie
-        if(stazioneA->autonomie[0] >= (B-A)) {
-            printf("\nPrint ufficiale: %d %d", A, B);
-        }else{
-            //Inizio a creare la lista di tappe mettendo la destinazione finale, seguiranno inserimenti in testa
-            struct valida* head = NULL;
-            head = inserisci_in_testa(head, B);
-
+        //'curr' scorre le tappe raggiungibili dal nodo prec
+        while (curr->key < start && curr->key >= end) {
+/*
             //DEBUG
-            stampa_lista(head);
+            printf("\n\nCiclo interno.");
+            printf("\nCurr vale %d", curr->key);
+            printf("\nPrec vale %d", prec->key);
+*/
+            if (curr->autonomie[0] >= max_autonomia) {
 
-            //Crea spazio che conterrà i dati del nodo del BST correntemente in visita
-            struct node* prec = (struct node*)malloc(sizeof(struct node*));
-            prec = predecessore(root, stazioneB); //Contiene il predecessore di B
-
-            //DEBUG
-            printf("\nPredecessore visitato: %d", prec->key);
-
-            //Scorrerà la lista dellee tappe valide
-            struct valida* curr = (struct valida*)malloc(sizeof(struct valida*));
-            curr = head;
-
-            //Minimo del BST
-            struct node* min = NULL;
-            min = minimo(root);
-
-            //Predecessore di A:
-            struct node* precA = (struct node*)malloc(sizeof(struct node*));
-            precA = predecessore(root, stazioneA);
-            if (precA == NULL){
-                printf("stocazzo");
-            }
-
-            //Finchè andando a ritroso non incontro il nodo del BST contenente la stazione appena prima di A
-            while(prec != NULL || prec != precA){
-
-                printf("\nrientrato");
                 //DEBUG
-                printf("\nEntrato nel loop di scorrimento del BST per il nodo %d", prec->key);
+                //printf("\nCurr->autonomie = %d", curr->autonomie[0]);
+                //printf("\nmax_autonomia = %d", max_autonomia);
 
-                //Controllo se l'autonomia max della stazione corrente basta per raggiungere la destinazione B
-                if (prec->autonomie[0] >= (B - prec->key)) {
-
-                    //DEBUG
-                    printf("\n\nIn questo nodo l'autonomia max e' sufficiente per raggiungere B.");
-
-                    curr = head;
-                    //Cancella tutto quello che si trova in mezzo tra l'inizio della lista e B
-                    while(curr->dist != B){
-                        //DEBUG
-                        printf("\nEntrato nel loop cancellazione");
-                        printf("\nRimuovendo %d", head->dist);
-                        head = rimuovi_in_testa(head);
-                        curr = head;
-                    }
-
-                    //DEBUG
-                    printf("\nSuperato il loop di cancellazione");
-                    printf("\n%d", prec->key);
-
-                    //Inserisci in testa alla lista tappe
-                    head = inserisci_in_testa(head, prec->key);
-
-                    //DEBUG
-                    printf("\nLista attuale: ");
-                    stampa_lista(head);
-
-                }else if(prec->key + prec->autonomie[0] < head->dist){ //Se da questa stazione non si può raggiungere nulla
-                    flag = 0;
-                    //Passo indietro nel BST
-                    prec = predecessore(root, prec);
-                }else{
-
-                    //DEBUG
-                    printf("\n\nIn questo nodo l'autonomia max non e' sufficiente per raggiungere B.");
-
-                    int chiave;
-
-                    curr = head;
-
-                    //Scorri la lista tappe (curr), ferma quando la max autonomia presente in prec non basta più per arrivare ad una stazione presente
-                    //nella lista, alla tappa appena prima di curr collega prec
-                    while(prec->autonomie[0] + prec->key >= curr->dist){
-                        chiave = curr->dist; //Salvo la chiave dell'ultimo nodo visitato prima di scorrere (da collegare a prec)
-
-                        //DEBUG
-                        printf("\nEntrato nel loop di scorrimento della lista 'valide'");
-                        curr = curr->next;
-
-                    }
-
-                    printf("\n%d chiave", chiave);
-                    curr = head;
-                    //Cancella tutto quello che si trova in mezzo tra prec e curr->dist == chiave
-                    while(curr->dist != chiave){
-
-                        //DEBUG
-                        printf("\nEntrato nel loop cancellazione in testa della lista 'valide'");
-                        printf("\n%d curr->dist", curr->dist);
-                        printf("\n%d chiave", chiave);
-
-                        head = rimuovi_in_testa(head);
-                        curr = head;
-                    }
-
-                    //'chiave' dovrebbe contenere la chiave del nodo precedente a quello dove si esce dal ciclo
-                    head = inserisci_in_testa(head, prec->key);
-
-                    //DEBUG
-                    printf("\nLista attuale: ");
-                    stampa_lista(head);
+                if (head->dist !=
+                    start) {//Se ho trovato un'autonomia migliore di quella presa prima cancello l'ultima tappa e riscrivo quella nuova
+                    head = rimuovi_in_testa(head);
+                    //printf("\nTesta rimossa, nuova testa %d", head->dist);
                 }
+                max_autonomia = curr->autonomie[0]; //Riassegno l'autonomia migliore
+                head = inserisci_in_testa(head, curr->key);
+                //printf("\nTesta migliore trovata %d", head->dist);
 
+                prec = curr;
 
-                if(flag == 1){
-                    //Passo indietro nel BST
-                    if (prec->key != A){
-                        prec = predecessore(root, prec);
-                        printf("\n prec %d", prec->key);
-                    }else{
-                        prec = NULL;
-                        precA = NULL;
-                        printf("\n stocazzo");
-                    }
-                }
-                flag = 1;
+                //printf("\nNuovo valore prec %d", prec->key);
 
+                curr = predecessore(root, curr);
+            } else {
+                curr = predecessore(root, curr);
             }
 
-            //DEBUG
-            printf("\nLista finale: ");
+/*
+            printf("\nLista attuale: ");
             stampa_lista(head);
+            printf("\nA fine iterazione interna: ");
+            printf("\ncurr->autonomia %d", curr->autonomie[0]);
+            printf("\ncurr vale %d", curr->key);
+            printf("\nprec vale %d", prec->key);
+            printf("\nhead->dist: %d", head->dist);
+            printf("\nstart %d", start);
+            printf("\nend %d", end);
+            printf("\nmax autonomia %d", max_autonomia);
+*/
         }
-    }else if(A>B){//Senso di percorrenza negativo
-        //DEBUG
-        printf("Stazione A: %d, Autonomia massima in A: %d, Stazione B: %d", stazioneA->key, stazioneB->key, stazioneA->autonomie[0]);
 
-        //Controllo se le tappe sono necessarie
-        if(stazioneA->autonomie[0] >= (A-B)){ //Tappe non necessarie
-            printf("\nPrint ufficiale: %d %d", A, B);
-        }else {
-
-            //Spazio per il nodo predecessore che scorrerà l'albero
-            struct node* prec = (struct node*)malloc(sizeof(struct node*));
-            prec = stazioneA;
-
-            //DEBUG
-            printf("\nPredecessore visitato: %d", prec->key);
-
-            //Inizio a creare la lista che conterrà le tappe valide
-            struct valida* head = NULL;
-            head = inserisci_in_testa(head, A);
-
-            //Variabile che conterrà la chiave e la max autonomia della stazione più lontana in visita, si parte da A
-            int start = A;
-            int end = A - stazioneA->autonomie[0];
-            /*DEBUG*/printf("\nend vale: %d", end);
-            int autonomia_max = stazioneA->autonomie[0];
-            int autonomia_start;
-
-            //Predecessore di B:
-            struct node* precB = (struct node*)malloc(sizeof(struct node*));
-            precB = predecessore(root, stazioneB);
-
-            //Ultima stazione visitata per ogni raggiungibilità
-            struct node* last = (struct node*)malloc(sizeof(struct node*));
-            last = NULL;
-
-            //Finchè andando a ritroso non incontro il nodo del BST contenente la stazione appena prima di A
-            while(prec->key != precB->key){
-
-                //DEBUG
-                printf("\nEntrato nel ciclo che scorre da A a B");
-
-                //Salvo l'autonomia del nodo iniziale corrente (si parte da A)
-                autonomia_start = prec->autonomie[0];
-
-                //DEBUG
-                printf("\nAutonomia max del nodo corrente: %d", autonomia_start);
-
-                //Scorro tutte le autonomie raggiungibili a partire dal nodo contrassegnato come start (end è la distanza max percorribile)
-                while(prec->key <= start && prec->key >= end){
-
-                    //DEBUG
-                    printf("\nEntrato nel loop che scorre le autonomie raggiungibili da nodo %d", prec->key);
-                    printf("\nAutonomia max salvata: %d", autonomia_max);
-                    printf("\nAutonomia di questo nodo: %d", prec->autonomie[0]);
-
-                    //Riassegno il valore della massima autonomia se ne trovo una maggiore o uguale e salvo la chiave della stazione nella lista 'valide'
-                    if (prec->autonomie[0] >= autonomia_max) {
-                        if (head->dist != A && prec->autonomie[0] > autonomia_max){
-                            head = rimuovi_in_testa(head);
-                        }
-                        head = inserisci_in_testa(head, prec->key);
-                        autonomia_max = prec->autonomie[0];
-                        printf("\nInserito in testa %d", head->dist);
-                        //Scorri
-                        prec = predecessore(root, prec);
-                    }else {
-                        //Scorri
-                        prec = predecessore(root, prec);
-                    }
-
-                    //DEBUG
-                    printf("\nAutonomia max adesso: %d", autonomia_max);
-
-
-
+        if (curr!=prec){
+            struct node *lastprec = stazione_end(root, prec->key);//nodo più lontano raggiungibile da prec(stazione con attualmente autonomia massima tra quelle visitate)
+            struct node *lastsucc = NULL;
+            //printf("\nlastprec %d", lastprec->key);
+            //printf("\nlastsucc %d", lastsucc->key);
+            struct node *succ = successore(root, curr);
+            //printf("\nsucc %d", succ->key);
+            while (succ->key<=prec->key){
+                //printf("\ndentro il while");
+                lastsucc = stazione_end(root, succ->key);
+                //printf("\nlastsucc %d", lastsucc->key);
+                if (lastsucc->key <= lastprec->key){
+                    //printf("\nsono entrato nel if con lastsucc %d per il nodo %d", lastsucc->key, succ->key);
+                    prec = succ;
+                    max_autonomia = succ->autonomie[0];
+                    head = rimuovi_in_testa(head);
+                    head = inserisci_in_testa(head, succ->key);
+                    break;
                 }
-
-                last = successore(root, prec);
-
-                printf("\nStart %d", start);
-                printf("\nTesta della lista: %d", head->dist);
-
-                //Se la testa della lista delle tappe è rimasta invariata, inserisco l'ultima stazione visitata in testa
-                if (head->dist == start){
-                    printf("\nValore della testa: %d", head->dist);
-                    head = inserisci_in_testa(head, last->key);
-                    printf("\nValore della testa dopo: %d", head->dist);
-                    autonomia_max = last->autonomie[0];
-                }
-
-
-                //Controllo se tra le stazioni del BST comprese tra quella con autonomia massima salvata e il valore corrente di prec ne
-                //esiste una più vicina all'attuale valore di 'end', allora cancello quella salvata e inserisco quella appena trovata
-                /*while (last->key != head->dist){
-                    if (last->autonomie[0] > autonomia_max){
-                        head = rimuovi_in_testa(head);
-                        head = inserisci_in_testa(head, last->key);
-                    }
-                    last = successore(root, last);
-                }*/
-
-                //Riassegno
-                start = head->dist;
-                end = start - autonomia_max;
-
-                //DEBUG
-                printf("\nValore di start: %d", start);
-                printf("\nValore di end: %d", end);
-                printf("\nValore attuale lista tappe: ");
-                stampa_lista(head);
-
+                succ = successore(root, succ);
             }
+        }
+/*
+        printf("\n\nFuori dal ciclo interno, terminate tappe raggiungibili, nel ciclo esterno: ");
+        printf("\nhead->dist: %d", head->dist);
+        printf("\nstart %d", start);
+        printf("\nend %d", end);
+        printf("\nmax autonomia %d", max_autonomia);
+*/
 
+        if (head->dist == start) {
+            head = inserisci_in_testa(head, curr->key);
+            prec = curr;
+            curr = predecessore(root, curr);
+        }
+
+        //Ferma a B se end risulta maggiore di B
+        if (prec->key - max_autonomia <= B) {
+            prec = stazioneB;
+            head = inserisci_in_testa(head, B);
+            //printf("\nOra è raggiungibile il nodo B.");
+        }
+
+        start = head->dist;
+        end = start - max_autonomia;
+        max_autonomia = curr->autonomie[0];
+
+        if (curr->key < end) {
+            flag = 0;
+            //printf("curr %d, end %d", curr->key, end);
+            printf("nessun percorso\n");
+            prec = NULL;
+            curr = NULL;
+        } else {
+/*
             //DEBUG
-            printf("\nValore finale lista tappe: ");
-            stampa_lista(head);
+            printf("\n\nValori alla fine ciclo esterno: ");
+            printf("\nStart vale: %d", start);
+            printf("\nEnd vale: %d", end);
+            printf("\nhead->dist: %d", head->dist);
+            printf("\nCurr vale %d", curr->key);
+            printf("\nPrec vale %d", prec->key);;
+            printf("\nMax auton %d", max_autonomia);*/
+        }
+
+        if (head->dist == B) {
+            //printf("\nLista finale: ");
+            stampa_lista_contrario(head);
         }
     }
-
+    //inorder(root);
+    /*struct node *prova = stazione_end(root, A);
+    printf("ciao %d", prova->key);*/
 }
+
+
+
